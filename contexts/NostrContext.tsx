@@ -56,43 +56,39 @@ export const NostrContextProvider: FC<PropsWithChildren> = ({ children }) => {
   }, [])
   const getUser = useCallback(
     async (hexpubkey: string) => {
-      if (ndk) {
-        let user: NDKUser | undefined | false = userCache.get(hexpubkey)
-        if (!user && user !== false) {
-          userCache.set(hexpubkey, false)
-          user = ndk.getUser({ hexpubkey })
-          await user.fetchProfile()
-          if (user) {
-            if (user.profile?.name) {
-              userCache.set(hexpubkey, user)
-            }
-            return user
-          } else {
-            throw new Error(ErrorCode.ProfileNotFound)
+      let user: NDKUser | undefined | false = userCache.get(hexpubkey)
+      if (!user && user !== false) {
+        userCache.set(hexpubkey, false)
+        user = ndk.getUser({ hexpubkey })
+        await user.fetchProfile()
+        if (user) {
+          if (user.profile?.name) {
+            userCache.set(hexpubkey, user)
           }
-        } else if (user) {
           return user
+        } else {
+          throw new Error(ErrorCode.ProfileNotFound)
         }
+      } else if (user) {
+        return user
       }
     },
     [userCache],
   )
   const getEvent = useCallback(
     async (id: string) => {
-      if (ndk) {
-        let event: NDKEvent | undefined | null | false = eventCache.get(id)
-        if (!event && event !== false) {
-          eventCache.set(id, false)
-          event = await ndk.fetchEvent(id)
-          if (event) {
-            eventCache.set(id, event)
-            return event
-          } else {
-            throw new Error(ErrorCode.EventNotFound)
-          }
-        } else if (event) {
+      let event: NDKEvent | undefined | null | false = eventCache.get(id)
+      if (!event && event !== false) {
+        eventCache.set(id, false)
+        event = await ndk.fetchEvent(id)
+        if (event) {
+          eventCache.set(id, event)
           return event
+        } else {
+          throw new Error(ErrorCode.EventNotFound)
         }
+      } else if (event) {
+        return event
       }
     },
     [eventCache],

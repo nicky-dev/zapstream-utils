@@ -28,12 +28,12 @@ export const AccountContextProvider: FC<PropsWithChildren> = ({ children }) => {
   const { ndk, getUser } = useContext(NostrContext)
   const [user, setUser] = useState<NDKUser>()
   useEffect(() => {
-    if (ndk) {
+    if (window.nostr) {
       ndk.signer = new NDKNip07Signer()
     }
   }, [ndk])
   const signIn = useCallback(async () => {
-    if (ndk) {
+    if (window.nostr) {
       const signerUser = await ndk.signer?.user()
       if (signerUser) {
         const _user = await getUser(signerUser.hexpubkey)
@@ -45,7 +45,7 @@ export const AccountContextProvider: FC<PropsWithChildren> = ({ children }) => {
     }
   }, [ndk, getUser])
   const signOut = useCallback(async () => {
-    if (ndk) {
+    if (window.nostr) {
       ndk.signer = new NDKNip07Signer()
       localStorage.removeItem('npub')
       setUser(undefined)
