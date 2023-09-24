@@ -1,9 +1,15 @@
 import './globals.css'
+import { Metadata } from 'next'
 import { DefaultTheme } from '@/themes'
 import { NostrContextProvider } from '@/contexts/NostrContext'
 import { AppContextProvider } from '@/contexts/AppContext'
 import { AccountContextProvider } from '@/contexts/AccountContext'
 import UserBar from '@/components/UserBar'
+
+export const metadata: Metadata = {
+  title: 'ZapStream Utilities',
+  description: 'Live streaming tools for ZapStream',
+}
 
 export default function RootLayout({
   children,
