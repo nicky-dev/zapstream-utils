@@ -103,7 +103,7 @@ export default function Page() {
   }, [ev, updateLiveStats])
 
   return (
-    <Box className="flex-1 flex flex-col">
+    <Box className="flex-1 flex flex-col p-4">
       {ev ? (
         <>
           <Typography>Title: {ev?.tagValue('title')}</Typography>
