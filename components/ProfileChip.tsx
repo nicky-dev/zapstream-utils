@@ -18,7 +18,7 @@ const ProfileChip = ({ user }: { user: NDKUser }) => {
   }, [setProfileAction, user.hexpubkey])
   return (
     <Box
-      className="flex overflow-hidden cursor-pointer hover:underline"
+      className="flex overflow-hidden cursor-pointer hover:underline flex-1"
       onClick={handleClickProfile}
     >
       <Avatar className="border-2" src={user?.profile?.image} />

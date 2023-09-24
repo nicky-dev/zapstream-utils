@@ -4,7 +4,8 @@ import { DefaultTheme } from '@/themes'
 import { NostrContextProvider } from '@/contexts/NostrContext'
 import { AppContextProvider } from '@/contexts/AppContext'
 import { AccountContextProvider } from '@/contexts/AccountContext'
-import UserBar from '@/components/UserBar'
+import { DrawerMenu } from '@/components/DrawerMenu'
+import { Box } from '@mui/material'
 
 export const metadata: Metadata = {
   title: 'ZapStream Utilities',
@@ -23,10 +24,12 @@ export default function RootLayout({
           <NostrContextProvider>
             <AppContextProvider>
               <AccountContextProvider>
-                <header className="absolute top-0 right-0 z-10">
-                  <UserBar />
-                </header>
-                <main className="min-h-screen flex flex-col">{children}</main>
+                <main className="min-h-screen flex">
+                  <DrawerMenu />
+                  <Box display="flex" flexDirection="column" flex={1}>
+                    {children}
+                  </Box>
+                </main>
               </AccountContextProvider>
             </AppContextProvider>
           </NostrContextProvider>
