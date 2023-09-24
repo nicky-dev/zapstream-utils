@@ -1,0 +1,7 @@
+version: "3.5"
+
+services:
+  zapstream-utils:
+    image: nickydev/zapstream-utils
+    ports:
+      - 8080:80
