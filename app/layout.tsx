@@ -8,7 +8,7 @@ import { DrawerMenu } from '@/components/DrawerMenu'
 import { Box } from '@mui/material'
 
 export const metadata: Metadata = {
-  title: 'ZapStream Utilities',
+  title: 'ZapStream Tools',
   description: 'Live streaming tools for ZapStream',
 }
 
