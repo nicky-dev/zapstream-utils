@@ -87,7 +87,7 @@ export default function Page() {
       } finally {
         timeoutHandler = setTimeout(() => {
           updateLiveStats(ev)
-        }, 5000)
+        }, 30000)
       }
     },
     [fetchStats, createEvent],
