@@ -2,9 +2,24 @@
 import { AccountContext } from '@/contexts/AccountContext'
 import { NostrContext } from '@/contexts/NostrContext'
 import { useSubscribe } from '@/hooks/useSubscribe'
-import { Box, Typography } from '@mui/material'
+import {
+  Box,
+  Button,
+  Chip,
+  TextField,
+  Toolbar,
+  Typography,
+} from '@mui/material'
 import { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk'
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
+import {
+  FormEvent,
+  FormEventHandler,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react'
 
 let timeoutHandler: NodeJS.Timeout
 export default function Page() {
@@ -22,9 +37,7 @@ export default function Page() {
   const [items] = useSubscribe(filter)
 
   useEffect(() => {
-    const event = items.filter(
-      (item) => item.tagValue('status') === 'live',
-    )?.[0]
+    const event = items[0]
     const streamId = event?.tagValue('d')
     setEv((prev) => {
       const id = prev?.tagValue('d')
@@ -70,6 +83,7 @@ export default function Page() {
   const updateLiveStats = useCallback(
     async (ev: NDKEvent) => {
       try {
+        if (ev.tagValue('status') !== 'live') return
         const stats = await fetchStats().catch((err) => console.error(err))
         if (!stats) return
         let currentPaticipants = ev.tagValue('current_participants') || '0'
@@ -102,15 +116,72 @@ export default function Page() {
     }
   }, [ev, updateLiveStats])
 
+  const handleUpdateRecordingUrl = useCallback<FormEventHandler>(
+    async (evt: FormEvent<HTMLFormElement>) => {
+      evt.preventDefault()
+      if (!ev) return
+      const form = new FormData(evt.currentTarget)
+      const recording = form.get('recording')?.toString()
+      if (!recording) return
+      const ndkEvent = createEvent()
+      if (!ndkEvent) return
+      if (ndkEvent.tagValue('status') === 'ended') {
+        ev.removeTag('streaming')
+        ndkEvent.removeTag('streaming')
+      }
+      ev.removeTag('recording')
+      ev.tags.push(['recording', recording])
+      ndkEvent.removeTag('recording')
+      ndkEvent.tags.push(['recording', recording])
+      await ndkEvent.publish()
+    },
+    [ev, createEvent],
+  )
+
+  const isLive = useMemo(() => ev?.tagValue('status') === 'live', [ev])
+  const tags = useMemo(() => ev?.getMatchingTags('t') || [], [ev])
   return (
     <Box className="flex-1 flex flex-col p-4">
       {ev ? (
         <>
-          <Typography>Title: {ev?.tagValue('title')}</Typography>
-          <Typography>Summary: {ev?.tagValue('summary')}</Typography>
-          <Typography>
-            Viewers: {ev?.tagValue('current_participants')}
+          <Typography variant="h6" fontWeight="bold">
+            {ev?.tagValue('title')}
           </Typography>
+
+          <Typography>{ev?.tagValue('summary')}</Typography>
+          <Box className="flex mt-2 gap-2">
+            <Chip
+              color={isLive ? 'primary' : 'secondary'}
+              label={isLive ? 'LIVE' : 'ENDED'}
+            />
+            {isLive && (
+              <Chip
+                variant="outlined"
+                label={(ev?.tagValue('current_participants') || 0) + ' viewers'}
+              />
+            )}
+            {tags.map(([_, tag], i) => {
+              return <Chip key={i} label={tag} />
+            })}
+          </Box>
+          {/* <Box component="form" onSubmit={handleUpdateRecordingUrl}>
+            <TextField
+              margin="dense"
+              size="small"
+              name="recording"
+              label="Playback URL"
+              placeholder="https://..."
+              defaultValue={ev?.tagValue('recording')}
+              InputProps={{
+                sx: { pr: 0 },
+                endAdornment: (
+                  <Button type="submit" variant="contained">
+                    Update
+                  </Button>
+                ),
+              }}
+            />
+          </Box> */}
         </>
       ) : (
         <Typography>No Live Event.</Typography>

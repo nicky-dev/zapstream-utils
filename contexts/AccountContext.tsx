@@ -25,8 +25,13 @@ export const AccountContext = createContext<Account>({
 })
 
 export const AccountContextProvider: FC<PropsWithChildren> = ({ children }) => {
-  const { ndk, getUser } = useContext(NostrContext)
+  const { ndk, getUser, connectRelays } = useContext(NostrContext)
   const [user, setUser] = useState<NDKUser>()
+
+  useEffect(() => {
+    connectRelays()
+  }, [connectRelays])
+
   useEffect(() => {
     if (window.nostr) {
       ndk.signer = new NDKNip07Signer()

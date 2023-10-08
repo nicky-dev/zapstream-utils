@@ -5,19 +5,24 @@ import {
   createContext,
   useCallback,
   useMemo,
+  useState,
 } from 'react'
-import NDK, { NDKEvent, NDKUser } from '@nostr-dev-kit/ndk'
+import NDK, { NDKEvent, NDKRelay, NDKUser } from '@nostr-dev-kit/ndk'
 import NDKCacheAdapterDexie from '@nostr-dev-kit/ndk-cache-dexie'
-import usePromise from 'react-use-promise'
 import NodeCache from 'node-cache'
 import { ErrorCode } from '@/constants/app'
 
 interface Nostr {
   ndk: NDK
   connected: boolean
+  connectRelays: (relays?: string[]) => void
   getUser: (hexpubkey: string) => Promise<NDKUser | undefined>
   getEvent: (id: string) => Promise<NDKEvent | undefined>
 }
+
+const defaultRelays = (process.env.NEXT_PUBLIC_RELAY_URLS || '')
+  .split(',')
+  .filter((item) => !!item)
 
 const ndk = new NDK({
   cacheAdapter: new NDKCacheAdapterDexie({ dbName: 'wherostr-ndk-db' }),
@@ -29,11 +34,13 @@ const ndk = new NDK({
 export const NostrContext = createContext<Nostr>({
   ndk,
   connected: false,
+  connectRelays: (relays?: string[]) => {},
   getUser: () => new Promise((resolve) => resolve(undefined)),
   getEvent: () => new Promise((resolve) => resolve(undefined)),
 })
 
 export const NostrContextProvider: FC<PropsWithChildren> = ({ children }) => {
+  const [connected, setConnected] = useState(false)
   const userCache = useMemo(
     () =>
       new NodeCache({
@@ -50,10 +57,21 @@ export const NostrContextProvider: FC<PropsWithChildren> = ({ children }) => {
       }),
     [],
   )
-  const [connected = false, error, state] = usePromise(async () => {
-    await ndk.connect()
-    return true
-  }, [])
+
+  const connectRelays = useCallback(
+    async (relays: string[] = defaultRelays) => {
+      setConnected(false)
+      ndk.explicitRelayUrls?.forEach((r) => {
+        if (relays.includes(r)) return
+        new NDKRelay(r).disconnect()
+      })
+      ndk.explicitRelayUrls = relays
+      await ndk.connect()
+      setConnected(true)
+    },
+    [],
+  )
+
   const getUser = useCallback(
     async (hexpubkey: string) => {
       let user: NDKUser | undefined | false = userCache.get(hexpubkey)
@@ -97,9 +115,10 @@ export const NostrContextProvider: FC<PropsWithChildren> = ({ children }) => {
     return {
       connected,
       ndk,
+      connectRelays,
       getUser,
       getEvent,
     }
-  }, [connected, getUser, getEvent])
+  }, [connected, connectRelays, getUser, getEvent])
   return <NostrContext.Provider value={value}>{children}</NostrContext.Provider>
 }
