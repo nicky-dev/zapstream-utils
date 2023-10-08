@@ -17,14 +17,14 @@ import { usePathname } from 'next/navigation'
 
 const menuItems = [
   {
-    href: '/restreamer',
+    href: '/restreamer/',
     icon: 'https://demo.datarhei.com/ui/static/media/rs-logo.c688a779e3fc730f1379448ecd09b1aa.svg',
     textPrimary: 'Restreamer',
     textSecondary: 'https://datarhei.com',
   },
   {
     disabled: true,
-    href: '/owncast',
+    href: '/owncast/',
     icon: 'https://owncast.online/images/logo.svg',
     textPrimary: 'Owncast',
     textSecondary: 'https://owncast.online',

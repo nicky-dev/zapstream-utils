@@ -4,17 +4,33 @@ import {
   NDKFilter,
   NDKKind,
   NDKSubscription,
+  NDKSubscriptionCacheUsage,
 } from '@nostr-dev-kit/ndk'
-import { useCallback, useContext, useEffect, useMemo, useState } from 'react'
-import usePromise from 'react-use-promise'
+import {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react'
 
 export type SubscribeResult = [
   NDKEvent[],
   () => Promise<NDKEvent[] | undefined>,
+  NDKEvent[],
+  () => void,
 ]
+
+const sortItems = (
+  items: NDKEvent[] | Set<NDKEvent> | IterableIterator<NDKEvent>,
+) => {
+  return Array.from(items).sort((a, b) => b.created_at! - a.created_at!)
+}
 
 export const useSubscribe = (
   filter?: NDKFilter<NDKKind>,
+  alwaysShowNewItems: boolean = false,
   options?: {
     disabled?: boolean
     onStart?: (events: NDKEvent[]) => void
@@ -25,116 +41,131 @@ export const useSubscribe = (
   const { ndk, connected } = useContext(NostrContext)
   const [sub, setSub] = useState<NDKSubscription>()
   const [items, setItems] = useState<NDKEvent[]>([])
-
-  const [events] = usePromise(async () => {
-    if (!filter || !connected) return
-    const items = await ndk.fetchEvents(filter)
-    return Array.from(items).sort((a, b) => {
-      if (b.kind !== 30311) {
-        return (b.created_at || 0) - (a.created_at || 0)
-      }
-      const startsA = Number(a.tagValue('starts') || a.created_at)
-      const startsB = Number(b.tagValue('starts') || b.created_at)
-      return startsB - startsA
-    })
-  }, [filter, connected])
+  const [newItems, setNewItems] = useState<NDKEvent[]>([])
+  const eos = useRef(false)
 
   useEffect(() => {
-    if (!filter || !events || !connected) {
+    if (!connected) return
+    if (!filter) {
+      setNewItems([])
       setItems([])
       return setSub((prev) => {
+        prev?.removeAllListeners()
         prev?.stop()
         return undefined
       })
     }
-    setItems(events)
-    const { since, until, ...old } = filter
+    setNewItems([])
+    setItems([])
+    eos.current = false
     const subscribe = ndk.subscribe(
-      { ...old, since: Math.round(Date.now() / 1000) },
-      { closeOnEose: false },
+      filter,
+      { closeOnEose: false, cacheUsage: NDKSubscriptionCacheUsage.CACHE_FIRST },
       undefined,
       false,
     )
     setSub((prev) => {
+      prev?.removeAllListeners()
       prev?.stop()
       return subscribe
     })
-  }, [ndk, connected, events, filter])
-
-  // useEffect(() => {
-  //   if (sub && disabled) {
-  //     sub.stop()
-  //     onStop?.()
-  //   }
-  // }, [disabled, sub, onStop])
+  }, [ndk, connected, filter])
 
   useEffect(() => {
-    if (!sub || !events || !connected) return
-    const items = new Set<NDKEvent>(events)
-    // onStart?.(events)
-    sub.on('event', (item: NDKEvent) => {
-      if (items.has(item)) return
-      items.add(item)
-      // onEvent?.(item)
-      setItems((prev) => {
-        if (item.kind !== 30311) {
-          return [item, ...prev].slice(0, 10000)
-        }
-        const index = prev.findIndex(
-          (d) => d.tagValue('d') === item.tagValue('d'),
-        )
-        if (index === -1) {
-          return [item, ...prev].slice(0, 10000).sort((a, b) => {
-            const startsA = Number(a.tagValue('starts') || a.created_at)
-            const startsB = Number(b.tagValue('starts') || b.created_at)
-            return startsB - startsA
-          })
-        }
-        return [...prev.slice(0, index), item, ...prev.slice(index + 1)]
-          .slice(0, 10000)
-          .sort((a, b) => {
-            const startsA = Number(a.tagValue('starts') || a.created_at)
-            const startsB = Number(b.tagValue('starts') || b.created_at)
-            return startsB - startsA
-          })
+    if (!connected || !sub) return
+    eos.current = false
+    let evetns = new Map<string, NDKEvent>()
+
+    const collectEvent = (item: NDKEvent) => {
+      const dedupKey = item.deduplicationKey()
+      const existingEvent = evetns.get(dedupKey)
+      if (existingEvent) {
+        item = dedupEvent(existingEvent, item)
+      }
+      item.ndk = ndk
+      return { existingEvent, dedupKey, event: item }
+    }
+
+    const onEventDup = (item: NDKEvent) => {
+      const { existingEvent, dedupKey, event } = collectEvent(item)
+      evetns.set(dedupKey, event)
+      if (eos.current) {
+        setNewItems((prev) => [event, ...prev])
+      } else {
+        setItems(sortItems(evetns.values()))
+      }
+    }
+    const onEvent = (item: NDKEvent) => {
+      const { existingEvent, dedupKey, event } = collectEvent(item)
+      evetns.set(dedupKey, event)
+      if (eos.current) {
+        setNewItems((prev) => [event, ...prev])
+      } else {
+        setItems(sortItems(evetns.values()))
+      }
+    }
+    sub.on('show-new-items', (newItems: NDKEvent[]) => {
+      newItems.forEach((ev) => {
+        evetns.set(ev.deduplicationKey(), ev)
       })
+      setItems(sortItems(evetns.values()))
+      setNewItems([])
+    })
+    sub.on('event', onEvent)
+    sub.on('event:dup', onEventDup)
+    sub.once('eose', () => {
+      eos.current = true
+      // setItems(Array.from(items.values()))
     })
     sub.start()
     return () => {
+      sub.removeAllListeners()
       sub.stop()
-      // onStop?.()
     }
-  }, [sub, events, connected])
+  }, [connected, sub, ndk])
 
   const oldestEvent = useMemo(() => items[items.length - 1], [items])
   const fetchMore = useCallback(async () => {
-    if (!filter || !oldestEvent || !connected) return
-    const { until, since, ...filterOriginal } = filter
-    const oldestDate = Number(
-      oldestEvent.tagValue('starts') || oldestEvent.created_at,
+    if (!connected || !filter || !oldestEvent) return
+    const { since, ...original } = filter
+    const events = await ndk.fetchEvents(
+      { ...original, until: oldestEvent.created_at, limit: 20 },
+      { cacheUsage: NDKSubscriptionCacheUsage.CACHE_FIRST },
     )
-    const events = await ndk.fetchEvents({
-      ...filterOriginal,
-      until: oldestDate,
-    })
-    const items = Array.from(events).sort((a, b) => {
-      if (b.kind !== 30311) {
-        return (b.created_at || 0) - (a.created_at || 0)
-      }
-      const startsA = Number(a.tagValue('starts') || a.created_at)
-      const startsB = Number(b.tagValue('starts') || b.created_at)
-      return startsB - startsA
-    })
-
+    const items = sortItems(events)
     let nonDupItems: NDKEvent[] = []
     setItems((prev) => {
-      nonDupItems = items.filter((item) => !prev.find((d) => d.id === item.id))
+      nonDupItems = items.filter(
+        (item) =>
+          !prev.find((d) => d.deduplicationKey() === item.deduplicationKey()),
+      )
       return [...prev, ...nonDupItems]
     })
     return nonDupItems
-  }, [filter, ndk, connected, oldestEvent])
+  }, [connected, ndk, filter, oldestEvent])
+
+  const showNewItems = useCallback(() => {
+    if (!newItems.length) return
+    sub?.emit('show-new-items', newItems)
+    // setItems((prev) => sortItems([...newItems, ...prev]))
+    // setNewItems([])
+  }, [newItems, sub])
+
+  useEffect(() => {
+    if (!alwaysShowNewItems) return
+    showNewItems()
+  }, [alwaysShowNewItems, showNewItems])
 
   return useMemo<SubscribeResult>(() => {
-    return [items, fetchMore]
-  }, [items, fetchMore])
+    return [items, fetchMore, newItems, showNewItems]
+  }, [items, fetchMore, newItems, showNewItems])
+}
+
+export function dedupEvent(event1: NDKEvent, event2: NDKEvent) {
+  // return the newest of the two
+  if (event1.created_at! > event2.created_at!) {
+    return event1
+  }
+
+  return event2
 }

@@ -6,8 +6,8 @@ import {
   Box,
   Button,
   Chip,
+  Divider,
   TextField,
-  Toolbar,
   Typography,
 } from '@mui/material'
 import { NDKEvent, NDKFilter, NDKKind } from '@nostr-dev-kit/ndk'
@@ -34,7 +34,7 @@ export default function Page() {
     }
   }, [user])
 
-  const [items] = useSubscribe(filter)
+  const [items] = useSubscribe(filter, true)
 
   useEffect(() => {
     const event = items[0]
@@ -164,24 +164,29 @@ export default function Page() {
               return <Chip key={i} label={tag} />
             })}
           </Box>
-          {/* <Box component="form" onSubmit={handleUpdateRecordingUrl}>
-            <TextField
-              margin="dense"
-              size="small"
-              name="recording"
-              label="Playback URL"
-              placeholder="https://..."
-              defaultValue={ev?.tagValue('recording')}
-              InputProps={{
-                sx: { pr: 0 },
-                endAdornment: (
-                  <Button type="submit" variant="contained">
-                    Update
-                  </Button>
-                ),
-              }}
-            />
-          </Box> */}
+          {!isLive ? (
+            <Box component="form" onSubmit={handleUpdateRecordingUrl}>
+              <Divider className="!my-4" />
+              <TextField
+                fullWidth
+                margin="dense"
+                size="small"
+                name="recording"
+                autoComplete="off"
+                label="Playback URL"
+                placeholder="https://..."
+                defaultValue={ev?.tagValue('recording')}
+                InputProps={{
+                  sx: { pr: 0 },
+                  endAdornment: (
+                    <Button type="submit" variant="contained">
+                      Update
+                    </Button>
+                  ),
+                }}
+              />
+            </Box>
+          ) : undefined}
         </>
       ) : (
         <Typography>No Live Event.</Typography>
