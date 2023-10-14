@@ -31,12 +31,6 @@ const sortItems = (
 export const useSubscribe = (
   filter?: NDKFilter<NDKKind>,
   alwaysShowNewItems: boolean = false,
-  options?: {
-    disabled?: boolean
-    onStart?: (events: NDKEvent[]) => void
-    onEvent?: (event: NDKEvent) => void
-    onStop?: () => void
-  },
 ) => {
   const { ndk, connected } = useContext(NostrContext)
   const [sub, setSub] = useState<NDKSubscription>()

@@ -49,7 +49,7 @@ export const DrawerMenu = () => {
         </Box>
       </Toolbar>
       <Divider />
-      <List subheader={<ListSubheader>Viewer count updater</ListSubheader>}>
+      {/* <List subheader={<ListSubheader>Viewer count updater</ListSubheader>}>
         {menuItems.map((item) => {
           return (
             <ListItemButton
@@ -74,7 +74,7 @@ export const DrawerMenu = () => {
             </ListItemButton>
           )
         })}
-      </List>
+      </List> */}
       <Box flex={1} />
       <UserBar />
     </Drawer>

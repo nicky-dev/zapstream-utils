@@ -19,6 +19,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
+      <link
+        rel="stylesheet"
+        href="https://fonts.googleapis.com/css?family=Noto+Sans+Thai"
+      />
+      {/* <base href="/p/478b10ed8accb6fcbb19fec499e2baf1cc5b9ef14f2ade239a562d6aa969fbce/d/zapstream-utils/" /> */}
       <body>
         <DefaultTheme>
           <NostrContextProvider>
