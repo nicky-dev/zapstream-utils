@@ -1,35 +1,23 @@
 'use client'
-import {
-  Box,
-  Divider,
-  Drawer,
-  List,
-  ListItemButton,
-  ListItemIcon,
-  ListItemText,
-  ListSubheader,
-  Toolbar,
-  Typography,
-} from '@mui/material'
-import Link from 'next/link'
+import { Box, Divider, Drawer, Toolbar, Typography } from '@mui/material'
 import UserBar from './UserBar'
 import { usePathname } from 'next/navigation'
 
-const menuItems = [
-  {
-    href: '/restreamer/',
-    icon: 'https://demo.datarhei.com/ui/static/media/rs-logo.c688a779e3fc730f1379448ecd09b1aa.svg',
-    textPrimary: 'Restreamer',
-    textSecondary: 'https://datarhei.com',
-  },
-  {
-    disabled: true,
-    href: '/owncast/',
-    icon: 'https://owncast.online/images/logo.svg',
-    textPrimary: 'Owncast',
-    textSecondary: 'https://owncast.online',
-  },
-]
+// const menuItems = [
+//   {
+//     href: '/restreamer/',
+//     icon: 'https://demo.datarhei.com/ui/static/media/rs-logo.c688a779e3fc730f1379448ecd09b1aa.svg',
+//     textPrimary: 'Restreamer',
+//     textSecondary: 'https://datarhei.com',
+//   },
+//   {
+//     disabled: true,
+//     href: '/owncast/',
+//     icon: 'https://owncast.online/images/logo.svg',
+//     textPrimary: 'Owncast',
+//     textSecondary: 'https://owncast.online',
+//   },
+// ]
 
 export const DrawerMenu = () => {
   const pathname = usePathname()

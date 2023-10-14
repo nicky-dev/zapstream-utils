@@ -30,7 +30,6 @@ glob('./out/**/*.{html,js,css}', {}, (err, files) => {
                 files.forEach(filename => {
                     const match = filename.replace("./out", "")
                     const replace = `zapstream-utils-${match.replaceAll("/", "_")}`
-                    console.log({ match, replace })
                     text = text.toString().replaceAll(match, replace)
                 })
                 fs.writeFile(file, text)
